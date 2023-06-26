@@ -1,0 +1,49 @@
+
+.iassist-video-main-conatiner {
+    video {
+        width: 360px;
+        background-color: black;
+        padding: 10;
+        margin: 1px 1px;
+    }
+    .iassist-mediasoup-container {
+        display: flex;
+        width: 100%;
+        flex-wrap: wrap;
+        margin: 50px;
+        margin-top: 20px;
+
+        #videoContainer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            video {
+                border-radius: 10px;
+            }
+        }
+
+
+    }
+    .iassist-button-container {
+        margin: 10px 50px;
+        .iassist-button {
+            border: none;
+            background-color: brown;
+            color: #fff;
+            margin: 3px;
+            border-radius: 4px;
+        }
+    }
+
+    @media only screen and (max-width: 1060px) {
+        .iassist-video-main-conatiner {
+            width: 300px;
+        }
+    }
+
+    @media only screen and (max-width: 940px) {
+        .iassist-video-main-conatiner {
+            width: 240px;
+        }
+    }
+}
