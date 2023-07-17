@@ -65,6 +65,7 @@ const WebRtcVideo = () => {
     const [joinCall, setJoinCall] = useState(false);
     const [updateReRender, setUpdateReRender] = useState(false);
     const videoContainers = useRef()
+    const [userName, setUserName] = useState('');
 
     useEffect(() => {
         videoContainers.current = document.getElementById('videoContainer')
@@ -376,6 +377,10 @@ const WebRtcVideo = () => {
     const makeCall = () => {
         videoContainers.current = document.getElementById('videoContainer')
         socket = io("http://localhost:3000/mediasoup")
+        // if (producerTransport) {
+        //     producerTransport.close();
+        // }
+        // console.log(producerTransport, 'producertrans', consumerTransports, 'consumetrans')
         socket.on('connection-success', ({ socketId }) => {
             console.log(socketId)
             getLocalStream()
@@ -445,13 +450,14 @@ const WebRtcVideo = () => {
     return (
         <div className="iassist-video-main-conatiner">
             <div className='iassist-button-container'>
-                {!joinCall && <button className='iassist-button' onClick={() => makeCall()}>Join call</button>}
+            {!joinCall && <input onChange={(e) => setUserName(e.target.value)}></input>}
+                {!joinCall && userName &&<button className='iassist-button' onClick={() => makeCall()}>Join call</button>}
                 {joinCall && <button className='iassist-button' onClick={() => {
                     !muteVideo ? videoProducer.pause() : videoProducer.resume();
                     setMuteVideo(prev => !prev)
                     
                 }}>{ muteVideo ? 'Unmute' : 'Mute'} Video</button>}
-                {joinCall && <button className='iassist-button' onClick={() =>{
+               {joinCall && <button className='iassist-button' onClick={() =>{
                     // const {_producers } = producerTransport;
                     // const firstValue = Array.from(_producers.values())[0];
                     muteAudio ? audioProducer.resume(): audioProducer.pause(); //firstValue._track.enabled = true : firstValue._track.enabled = false;
@@ -463,6 +469,9 @@ const WebRtcVideo = () => {
             <div className='iassist-mediasoup-container'>
                 <div id="videoContainer">
                     <video id="localVideo" ref={localVideo} autoPlay className="video" muted ></video>
+                    <span>
+                        {userName}
+                    </span>
                 </div>
             </div>
         </div>
