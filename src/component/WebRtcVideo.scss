@@ -5,6 +5,8 @@
         background-color: black;
         padding: 10;
         margin: 1px 1px;
+        -webkit-transform: scaleX(-1);
+        transform: scaleX(-1);
     }
     .iassist-mediasoup-container {
         display: flex;

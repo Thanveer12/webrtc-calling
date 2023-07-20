@@ -56,6 +56,7 @@ socket = io("http://localhost:3000/mediasoup")
 
 const WebRtcVideo = () => {
 
+    console.log("VP", videoProducer)
     const localVideo = useRef();
     const videoContainer = useRef([])
     const [getRemoteVideo, setRemoteVideo] = useState([]);
@@ -376,7 +377,7 @@ const WebRtcVideo = () => {
 
     const makeCall = () => {
         videoContainers.current = document.getElementById('videoContainer')
-        socket = io("http://localhost:3000/mediasoup")
+        socket = io("http://localhost:5000/mediasoup")
         // if (producerTransport) {
         //     producerTransport.close();
         // }
@@ -448,10 +449,12 @@ const WebRtcVideo = () => {
   
 
     return (
+
         <div className="iassist-video-main-conatiner">
             <div className='iassist-button-container'>
-            {!joinCall && <input onChange={(e) => setUserName(e.target.value)}></input>}
-                {!joinCall && userName &&<button className='iassist-button' onClick={() => makeCall()}>Join Call</button>}
+            {/* {!joinCall && <input onChange={(e) => setUserName(e.target.value)}></input>} */}
+                {!joinCall && 
+                <button className='iassist-button' onClick={() => makeCall()}>Join Call</button>}
                 {joinCall && <button className='iassist-button' onClick={() => {
                     !muteVideo ? videoProducer.pause() : videoProducer.resume();
                     setMuteVideo(prev => !prev)
