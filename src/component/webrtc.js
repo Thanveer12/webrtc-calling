@@ -54,8 +54,8 @@ const WebRtcVideo = () => {
     const videoContainer = useRef([])
     const [getRemoteVideo, setRemoteVideo] = useState([]);
     const [currentVideo, setCurrentVideo] = useState()
-    const [muteAudio, setMuteAudio] = useState(false);
-    const [muteVideo, setMuteVideo] = useState(false);
+    const [muteAudio, setMuteAudio] = useState(true);
+    const [muteVideo, setMuteVideo] = useState(true);
     const [joinCall, setJoinCall] = useState(false);
     const [updateReRender, setUpdateReRender] = useState(false);
     const videoContainers = useRef()
@@ -245,8 +245,10 @@ const WebRtcVideo = () => {
         // this action will trigger the 'connect' and 'produce' events above
         // debugger
         audioProducer = await producerTransport.produce(audioParams);
+        !muteAudio ? audioProducer.resume(): audioProducer.pause();
         if (!isScreenShare) {
             videoProducer = await producerTransport.produce(videoParams);
+            muteVideo ? videoProducer.pause() : videoProducer.resume();
             videoProducer.on('trackended', () => {
                 console.log('video track ended')
     
@@ -489,11 +491,13 @@ const WebRtcVideo = () => {
         videoParams = { params };
         device = null;
         screenParams = undefined;
+        setMuteAudio(true);
+        setMuteVideo(true)
         setEnableScreenShare(false);
         if  (videoContainers.current) {
             let children = videoContainers.current.children;
             for (let i = 0; i < children.length; i++) {
-                if (i > 0) {
+                if (i > 0 && children[i].id !== 'localVideo') {
                     videoContainers.current.removeChild(children[i]);
                     i = i - 1;
                 }
@@ -529,7 +533,7 @@ const WebRtcVideo = () => {
                         {userName}
                     </span> */}
                     {console.log(enableScreenShare, 'enavkead')}
-                    <video id="localVideo1" className={isScreenShare ? "local-screen-visible" : "local-screen-none"} ref={localScreenVideo} autoPlay muted ></video>
+                    <video id="localVideo" className={isScreenShare ? "local-screen-visible" : "local-screen-none"} ref={localScreenVideo} autoPlay muted ></video>
                 </div>
             </div>
         </div>
