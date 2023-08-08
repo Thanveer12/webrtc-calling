@@ -9,16 +9,8 @@ const roomName = window.location.pathname.split('/')[2] || 'room12';
 
 let socket;
 
-let device
-let rtpCapabilities
-let producerTransport
-let consumerTransports = []
-let consumerTransport;
-let audioProducer
-let videoProducer
-let consumer
-let isProducer = false
-let producerObject
+let device, rtpCapabilities, producerTransport, consumerTransports = [],consumerTransport, 
+audioProducer, videoProducer, consumer, isProducer = false, producerObject, screenShareProducer, isScreenShare = false;
 // let localVideo;
 // let videoContainer;
 
@@ -50,14 +42,16 @@ let params = {
 }
 
 let audioParams;
+let screenParams;
 let videoParams = { params };
 let consumingTransports = [];
-socket = io("http://localhost:3000/mediasoup")
+socket = io("http://localhost:3001/mediasoup")
 
 const WebRtcVideo = () => {
 
     console.log("VP", videoProducer)
     const localVideo = useRef();
+    const localScreenVideo = useRef();
     const videoContainer = useRef([])
     const [getRemoteVideo, setRemoteVideo] = useState([]);
     const [currentVideo, setCurrentVideo] = useState()
@@ -67,6 +61,7 @@ const WebRtcVideo = () => {
     const [updateReRender, setUpdateReRender] = useState(false);
     const videoContainers = useRef()
     const [userName, setUserName] = useState('');
+    const [enableScreenShare, setEnableScreenShare] = useState(false);
 
     useEffect(() => {
         videoContainers.current = document.getElementById('videoContainer')
@@ -83,6 +78,17 @@ const WebRtcVideo = () => {
         videoParams = { track: stream.getVideoTracks()[0], ...videoParams };
 
         joinRoom()
+    }
+
+    const streamSuccessShare = (stream) => {
+
+        localScreenVideo.current.srcObject = stream;
+        
+        audioParams = { track: stream.getAudioTracks()[0], ...audioParams };
+
+        screenParams = { track: stream.getVideoTracks()[0], ...screenParams };
+
+        connectSendTransport()
     }
 
 
@@ -115,6 +121,25 @@ const WebRtcVideo = () => {
             }
         })
         .then(streamSuccess)
+        .catch(error => {
+            console.log(error.message)
+        })
+    }
+
+    const getLocalShareStream = () => {
+
+        isScreenShare = true;
+        console.log(enableScreenShare)
+        setEnableScreenShare(true)
+        navigator.mediaDevices.getDisplayMedia({
+           
+            audio: true,
+            video: {
+                width: { ideal: 1920, max: 1920 },
+                height: { ideal: 1080, max: 1080 }
+              }
+        })
+        .then(streamSuccessShare)
         .catch(error => {
             console.log(error.message)
         })
@@ -219,9 +244,36 @@ const WebRtcVideo = () => {
         // to send media to the Router
         // https://mediasoup.org/documentation/v3/mediasoup-client/api/#transport-produce
         // this action will trigger the 'connect' and 'produce' events above
-        
+        // debugger
         audioProducer = await producerTransport.produce(audioParams);
-        videoProducer = await producerTransport.produce(videoParams);
+        if (!isScreenShare) {
+            videoProducer = await producerTransport.produce(videoParams);
+            videoProducer.on('trackended', () => {
+                console.log('video track ended')
+    
+                // close video track
+            })
+    
+            videoProducer.on('transportclose', () => {
+                console.log('video transport ended')
+    
+                // close video track
+            })
+        }
+        if (isScreenShare) {
+            screenShareProducer = await producerTransport.produce(screenParams)
+            screenShareProducer.on('trackended', () => {
+                console.log('video track ended')
+    
+                // close video track
+            })
+    
+            screenShareProducer.on('transportclose', () => {
+                console.log('video transport ended')
+    
+                // close video track
+            })
+        }
 
         audioProducer.on('trackended', () => {
             console.log('audio track ended')
@@ -235,17 +287,8 @@ const WebRtcVideo = () => {
             // close audio track
         })
         
-        videoProducer.on('trackended', () => {
-            console.log('video track ended')
-
-            // close video track
-        })
-
-        videoProducer.on('transportclose', () => {
-            console.log('video transport ended')
-
-            // close video track
-        })
+       
+       
     }
 
     const signalNewConsumerTransport = async (remoteProducerId) => {
@@ -309,11 +352,13 @@ const WebRtcVideo = () => {
         // for consumer, we need to tell the server first
         // to create a consumer based on the rtpCapabilities and consume
         // if the router can consume, it will send back a set of params as below
+
         await socket.emit('consume', {
             rtpCapabilities: device.rtpCapabilities,
             remoteProducerId,
             serverConsumerTransportId,
         }, async ({ params }) => {
+            // debugger
             if (params.error) {
             console.log('Cannot Consume')
             return
@@ -411,13 +456,21 @@ const WebRtcVideo = () => {
 
     const closeConnection = () => {
         setJoinCall(false)
-        socket.close();
+        setUserName('')
+        if (socket.connected) socket.close();
         socket = null;
         localVideo.current.srcObject = null;
+        localScreenVideo.current.srcObject = null;
        
         if (videoProducer && !videoProducer.closed) { 
+
             videoProducer.close();
             videoProducer = null;
+        }
+
+        if (screenShareProducer && !screenShareProducer.closed) {
+            screenShareProducer.close();
+            screenShareProducer = null;
         }
 
         if (audioProducer && !audioProducer.closed) {
@@ -433,9 +486,12 @@ const WebRtcVideo = () => {
             producerTransport.close();
             producerTransport = null;
         }
+        isScreenShare = false;
         audioParams = undefined;
         videoParams = { params };
         device = null;
+        screenParams = undefined;
+        setEnableScreenShare(false);
         if  (videoContainers.current) {
             let children = videoContainers.current.children;
             for (let i = 0; i < children.length; i++) {
@@ -452,9 +508,8 @@ const WebRtcVideo = () => {
 
         <div className="iassist-video-main-conatiner">
             <div className='iassist-button-container'>
-            {/* {!joinCall && <input onChange={(e) => setUserName(e.target.value)}></input>} */}
-                {!joinCall && 
-                <button className='iassist-button' onClick={() => makeCall()}>Join Call</button>}
+            {!joinCall &&<> <label style={{color:'aliceblue'}}>UserName : </label> <input onChange={(e) => setUserName(e.target.value)}></input></>}
+                {!joinCall && userName &&<button className='iassist-button' onClick={() => makeCall()}>Join Call</button>}
                 {joinCall && <button className='iassist-button' onClick={() => {
                     !muteVideo ? videoProducer.pause() : videoProducer.resume();
                     setMuteVideo(prev => !prev)
@@ -466,16 +521,18 @@ const WebRtcVideo = () => {
                     muteAudio ? audioProducer.resume(): audioProducer.pause(); //firstValue._track.enabled = true : firstValue._track.enabled = false;
                     setMuteAudio(prev => !prev);
                 }}>{ muteAudio ? 'Unmute' : 'Mute'} Audio</button>}
-                {joinCall && <button className='iassist-button' onClick={() => {}}>ScreenShare</button>}
+                {joinCall && <button className='iassist-button' onClick={() => {getLocalShareStream()}}>Screen Share</button>}
                 {joinCall && <button className='iassist-button' onClick={() => closeConnection()}>Exit</button>}
             </div>
 
             <div className='iassist-mediasoup-container'>
                 <div id="videoContainer">
-                    <video id="localVideo" ref={localVideo} autoPlay className="video" muted ></video>
-                    <span>
+                    <video id="localVideo" className={joinCall ? "local-screen-visible" : "local-screen-none"} ref={localVideo} autoPlay muted ></video>
+                    {/* <span>
                         {userName}
-                    </span>
+                    </span> */}
+                    {console.log(enableScreenShare, 'enavkead')}
+                    <video id="localVideo1" className={isScreenShare ? "local-screen-visible" : "local-screen-none"} ref={localScreenVideo} autoPlay muted ></video>
                 </div>
             </div>
         </div>
